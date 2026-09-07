@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { readLogs } from "./log-service.js";
+import { readLogs, getLogIndex, updateLogIndex } from "./log-service.js";
 import { calculateLogStatistics } from "./log-statistics.js";
 import { watchLogs } from "./live-log-watcher.js";
 import { z } from "zod";
@@ -176,55 +176,65 @@ server.tool(
     .describe("Only analyze logs from the last N minutes"),
  },
 
-  async ({minutes}) => {
-    try {
-      const logs = await readLogs();
+  async ({ minutes }) => {
+  try {
+    const index = await getLogIndex();
 
-let filteredLogs = logs;
+    // Pick up any new logs added since the last update.
+    await updateLogIndex();
 
-if (minutes !== undefined) {
-  const cutoffTime = Date.now() - minutes * 60 * 1000;
+    const aggregation = index.getAggregation();
 
-  filteredLogs = logs.filter(
-    (log) => new Date(log.timestamp).getTime() >= cutoffTime
-  );
-}
-
-const statistics = calculateLogStatistics(filteredLogs);
-
+    if (minutes === undefined) {
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(
-  {
-    minutes: minutes ?? null,
-    ...statistics,
-  },
-  null,
-  2
-),
+            text: JSON.stringify(aggregation, null, 2),
           },
         ],
-      };
-    } catch (error) {
-      logError("Failed to analyze logs:", error);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              error: "Failed to analyze logs",
-              message:
-                error instanceof Error ? error.message : String(error),
-            }),
-          },
-        ],
-        isError: true,
       };
     }
+
+    const logs = await readLogs();
+
+    const cutoff = Date.now() - minutes * 60 * 1000;
+
+    const filteredLogs = logs.filter(
+      (log) => new Date(log.timestamp).getTime() >= cutoff
+    );
+
+    const statistics = calculateLogStatistics(filteredLogs);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              minutes,
+              ...statistics,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  } catch (error) {
+    logError("Failed to analyze logs:", error);
+
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: "Failed to analyze logs.",
+        },
+      ],
+    };
   }
+},
 );
 // 3 tail_live_logs
 server.tool(
