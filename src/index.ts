@@ -1,10 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { readLogs } from "./log-service.js";
+import { calculateLogStatistics } from "./log-statistics.js";
 import { watchLogs } from "./live-log-watcher.js";
 import { z } from "zod";
 import type { Log } from "./types.js";
-
+import { logInfo, logWarn, logError } from "./logger.js";
 const server = new McpServer(
   {
     name: "mcp-log-server",
@@ -47,6 +48,7 @@ server.tool(
   },
 
   async ({ level, limit, minutes }) => {
+    try {
     const logs = await readLogs();
     let filteredLogs = logs;
 
@@ -65,17 +67,33 @@ if (minutes !== undefined) {
 }
 
     const recentLogs = filteredLogs
-      .slice(-limit)
-      .reverse();
+  .slice(-limit)
+  .reverse();
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(recentLogs, null, 2),
-        },
-      ],
-    };
+return {
+  content: [
+    {
+      type: "text",
+      text: JSON.stringify(recentLogs, null, 2),
+    },
+  ],
+};
+} catch (error) {
+  logError("Failed to get recent logs:", error);
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          error: "Failed to read logs",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      },
+    ],
+    isError: true,
+  };
+}
   }
 );
 
@@ -90,6 +108,7 @@ server.tool(
       .describe("Text to search for in the logs"),
   },
   async ({ query }) => {
+  try {
     const logs = await readLogs();
 
     const searchTerm = query.trim().toLowerCase();
@@ -124,8 +143,90 @@ server.tool(
         },
       ],
     };
+  } catch (error) {
+    logError("Failed to search logs:", error);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            error: "Failed to search logs",
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+);
+
+// Tool 3: Analyze logs
+server.tool(
+  "analyze_logs",
+  "Analyze application logs and return statistics",
+  {
+  minutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .optional()
+    .describe("Only analyze logs from the last N minutes"),
+ },
+
+  async ({minutes}) => {
+    try {
+      const logs = await readLogs();
+
+let filteredLogs = logs;
+
+if (minutes !== undefined) {
+  const cutoffTime = Date.now() - minutes * 60 * 1000;
+
+  filteredLogs = logs.filter(
+    (log) => new Date(log.timestamp).getTime() >= cutoffTime
+  );
+}
+
+const statistics = calculateLogStatistics(filteredLogs);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+  {
+    minutes: minutes ?? null,
+    ...statistics,
+  },
+  null,
+  2
+),
+          },
+        ],
+      };
+    } catch (error) {
+      logError("Failed to analyze logs:", error);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: "Failed to analyze logs",
+              message:
+                error instanceof Error ? error.message : String(error),
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 );
+// 3 tail_live_logs
 server.tool(
   "tail_live_logs",
   "Continuously watches the application log file and reports new logs as they arrive",
@@ -137,58 +238,111 @@ server.tool(
       .max(300)
       .default(30)
       .describe("How long to watch for new logs, in seconds"),
+
+      level: z
+  .enum(["INFO", "WARN", "ERROR"])
+  .optional()
+  .describe("Only stream logs with this level"),
+       service: z
+  .string()
+  .min(1)
+  .optional()
+  .describe("Only stream logs from this service"),
+      max_logs: z
+  .number()
+  .int()
+  .min(1)
+  .max(1000)
+  .default(100)
+  .describe("Maximum number of matching logs to collect"),
   },
 
-  async ({ duration }, extra) => {
-  const logs: Log[] = [];
+  async ({ duration, level, service, max_logs }, extra) => {
+  try {
+    const logs: Log[] = [];
 
-   const stopWatching = await watchLogs(async (log) => {
-  logs.push(log);
+    const stopWatching = await watchLogs(async (log) => {
+      if (level && log.level !== level) {
+        return;
+      }
 
-  console.error("Live log:", log);
+      if (service && log.service !== service) {
+        return;
+      }
 
-  await server.server.sendLoggingMessage({
-    level: log.level.toLowerCase() as "debug" | "info" | "notice" | "warning" | "error" | "critical" | "alert" | "emergency",
-    data: JSON.stringify(log),
-  });
-});
+      if (logs.length < max_logs) {
+        logs.push(log);
+      }
 
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      resolve();
-    }, duration * 1000);
+       logInfo("Live log:", log);
 
-    extra.signal.addEventListener(
-      "abort",
-      () => {
-         console.error("MCP request cancelled");
-         clearTimeout(timer);
-         resolve();
-      },
-      { once: true }
-    );
-  });
+      await server.server.sendLoggingMessage({
+        level: log.level.toLowerCase() as
+          | "debug"
+          | "info"
+          | "notice"
+          | "warning"
+          | "error"
+          | "critical"
+          | "alert"
+          | "emergency",
+        data: JSON.stringify(log),
+      });
+    });
 
-  stopWatching();
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        resolve();
+      }, duration * 1000);
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            duration,
-            logsReceived: logs.length,
-            logs,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
+      extra.signal.addEventListener(
+        "abort",
+        () => {
+          logWarn("MCP request cancelled");
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true }
+      );
+    });
+
+    stopWatching();
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              duration,
+              logsReceived: logs.length,
+              logs,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  } catch (error) {
+    logError("Failed to tail live logs:", error);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            error: "Failed to stream live logs",
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        },
+      ],
+      isError: true,
+    };
+  }
 }
 );
 const transport = new StdioServerTransport();
 
 await server.connect(transport);
+logInfo("MCP server started");
