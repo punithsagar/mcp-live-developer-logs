@@ -1,5 +1,4 @@
 node_modules/
 dist/
-logs/app.jsonl
-logs/app.jsonl.backup
+logs/
 .env

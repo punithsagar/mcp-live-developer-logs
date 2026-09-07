@@ -1,7 +1,4 @@
-
-import { appendFile } from "node:fs/promises";
-
-const logFile = "logs/app.jsonl";
+import { writeLog } from "./storage/log-writer.js";
 
 const services = [
   "auth-service",
@@ -23,29 +20,29 @@ const messages = [
 const levels = ["INFO", "INFO", "INFO", "WARN", "ERROR"];
 
 function generateLog() {
-  const log = {
+  return {
     timestamp: new Date().toISOString(),
-    level: levels[Math.floor(Math.random() * levels.length)],
+    level: levels[Math.floor(Math.random() * levels.length)] as
+      | "INFO"
+      | "WARN"
+      | "ERROR",
     service: services[Math.floor(Math.random() * services.length)],
     message: messages[Math.floor(Math.random() * messages.length)],
   };
-
-  return JSON.stringify(log) + "\n";
 }
 
-async function writeLog() {
+async function generateAndWriteLog() {
   const log = generateLog();
 
-  await appendFile(logFile, log);
+  await writeLog(log);
 
-  console.log(log.trim());
+  console.log(JSON.stringify(log));
 }
 
 console.log("Log generator started...");
 
 setInterval(() => {
-  writeLog().catch((error) => {
+  generateAndWriteLog().catch((error) => {
     console.error("Failed to write log:", error);
   });
 }, 2000);
-
