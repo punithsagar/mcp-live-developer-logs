@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
 import type { Log } from "../types.js";
 
-const logFile = "logs/app.jsonl";
+import { config } from "../config.js";
 
 export async function readStoredLogs(): Promise<Log[]> {
-  const file = await readFile(logFile, "utf-8");
-
+  const file = await readFile(config.logFile, "utf-8");
   const lines = file
     .split("\n")
     .filter((line) => line.trim().length > 0);

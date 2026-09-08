@@ -1,7 +1,6 @@
 import type { Log } from "./types.js";
 import { readStoredLogs } from "./storage/log-storage.js";
 import { LogIndex } from "./storage/log-index.js";
-import { calculateStreamingStatistics } from "./storage/streaming-log-statistics.js";
 
 const logIndex = new LogIndex();
 let initialized = false;
@@ -25,7 +24,4 @@ export async function getLogIndex(): Promise<LogIndex> {
 export async function updateLogIndex(): Promise<void> {
   await ensureInitialized();
   await logIndex.update();
-}
-export async function getStreamingStatistics() {
-  return calculateStreamingStatistics();
 }

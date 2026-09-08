@@ -2,22 +2,18 @@ import {
   readdir,
   rename,
   stat,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { config } from "../config.js";
 
-const logDirectory = "logs";
-const logFile = path.join(logDirectory, "app.jsonl");
-
-const MAX_FILE_SIZE = 1024 * 1024;
-
-// Keep the newest 5 rotated files.
-const MAX_BACKUPS = 5;
+const logDirectory = path.dirname(config.logFile);
 
 export async function rotateLogsIfNeeded(): Promise<boolean> {
-  const stats = await stat(logFile);
+  const stats = await stat(config.logFile);
 
-  if (stats.size < MAX_FILE_SIZE) {
+  if (stats.size < config.rotation.maxFileSize) {
     return false;
   }
 
@@ -30,9 +26,9 @@ export async function rotateLogsIfNeeded(): Promise<boolean> {
     `app-${timestamp}.jsonl`
   );
 
-  await rename(logFile, backupFile);
+  await rename(config.logFile, backupFile);
 
-  await writeFile(logFile, "", "utf-8");
+  await writeFile(config.logFile, "", "utf-8");
 
   await enforceRetention();
 
@@ -51,15 +47,15 @@ async function enforceRetention(): Promise<void> {
     .sort()
     .reverse();
 
-  const filesToDelete = backups.slice(MAX_BACKUPS);
+  const filesToDelete = backups.slice(
+    config.rotation.maxBackups
+  );
 
   for (const file of filesToDelete) {
     const filePath = path.join(logDirectory, file);
 
     try {
-      await import("node:fs/promises").then(({ unlink }) =>
-        unlink(filePath)
-      );
+      await unlink(filePath);
     } catch {
       // Ignore cleanup failures.
     }
