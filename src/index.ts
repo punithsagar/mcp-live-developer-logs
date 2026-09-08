@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { logInfo } from "./logger.js";
+import { registerSystemHealthTool } from "./tools/system-health.js";
 
 import { registerRecentLogsTool } from "./tools/recent-logs.js";
 import { registerSearchLogsTool } from "./tools/search-logs.js";
@@ -24,6 +25,7 @@ registerRecentLogsTool(server);
 registerSearchLogsTool(server);
 registerAnalyzeLogsTool(server);
 registerTailLiveLogsTool(server);
+registerSystemHealthTool(server);
 
 const transport = new StdioServerTransport();
 
