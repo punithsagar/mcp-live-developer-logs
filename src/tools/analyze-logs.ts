@@ -20,12 +20,17 @@ export function registerAnalyzeLogsTool(server: any): void {
 
     async ({ minutes }: { minutes?: number }) => {
       try {
-        const index = await getLogIndex();
+       const logIndex = await getLogIndex();
 
-        // Pick up any new logs added since the last update.
-        await updateLogIndex();
+await updateLogIndex();
 
-        const aggregation = index.getAggregation();
+const cachedMetrics = logIndex.getCachedMetrics();
+
+if (!cachedMetrics) {
+  throw new Error("Metrics cache is not initialized");
+}
+
+const aggregation = cachedMetrics.aggregation;
 
         if (minutes === undefined) {
           return {
