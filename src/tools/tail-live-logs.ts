@@ -3,8 +3,8 @@ import { watchLogs } from "../live-log-watcher.js";
 import { config } from "../config.js";
 import { logInfo, logWarn, logError } from "../logger.js";
 import type { Log } from "../types.js";
-
-export function registerTailLiveLogsTool(server: any): void {
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+export function registerTailLiveLogsTool(server: McpServer): void {
   server.tool(
     "tail_live_logs",
     "Continuously watches the application log file and reports new logs as they arrive",

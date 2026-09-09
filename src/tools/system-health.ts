@@ -1,7 +1,7 @@
 import { getSystemHealth } from "../system-health.js";
 import { logError } from "../logger.js";
-
-export function registerSystemHealthTool(server: any): void {
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+export function registerSystemHealthTool(server: McpServer): void {
   server.tool(
     "get_system_health",
     "Returns the current health and runtime status of the MCP log server",

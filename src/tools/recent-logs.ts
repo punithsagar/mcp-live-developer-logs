@@ -2,8 +2,9 @@ import { z } from "zod";
 import { readLogs } from "../log-service.js";
 import { config } from "../config.js";
 import { logError } from "../logger.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerRecentLogsTool(server: any): void {
+export function registerRecentLogsTool(server: McpServer): void {
   server.tool(
     "get_recent_logs",
     "Returns recent application logs, optionally filtered by log level",

@@ -3,8 +3,8 @@ import { getLogIndex, updateLogIndex } from "../log-service.js";
 import { calculateLogStatistics } from "../log-statistics.js";
 import { config } from "../config.js";
 import { logError } from "../logger.js";
-
-export function registerAnalyzeLogsTool(server: any): void {
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+export function registerAnalyzeLogsTool(server: McpServer): void {
   server.tool(
     "analyze_logs",
     "Analyze application logs and return statistics",

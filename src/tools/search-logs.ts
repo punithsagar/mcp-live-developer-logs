@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { readLogs } from "../log-service.js";
 import { logError } from "../logger.js";
-
-export function registerSearchLogsTool(server: any): void {
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+export function registerSearchLogsTool(server: McpServer): void {
   server.tool(
     "search_logs",
     "Search application logs by text",

@@ -1,48 +1,67 @@
 import { writeLog } from "./storage/log-writer.js";
+import type { Log, LogLevel } from "./types.js";
 
 const services = [
+  "api-service",
   "auth-service",
   "payment-service",
   "database-service",
-  "api-service",
 ];
 
-const messages = [
-  "Request completed successfully",
-  "User logged in successfully",
-  "Payment initiated",
-  "Database query completed",
-  "Database connection failed",
-  "Payment retry attempt",
-  "API request received",
-];
+const messages: Record<LogLevel, string[]> = {
+  INFO: [
+    "API request completed successfully",
+    "User request processed",
+    "Database query completed",
+    "Payment request received",
+    "Authentication successful",
+  ],
 
-const levels = ["INFO", "INFO", "INFO", "WARN", "ERROR"];
+  WARN: [
+    "Slow database query detected",
+    "Payment retry scheduled",
+    "API response time exceeded threshold",
+    "Rate limit approaching",
+    "Connection pool usage is high",
+  ],
 
-function generateLog() {
-  return {
-    timestamp: new Date().toISOString(),
-    level: levels[Math.floor(Math.random() * levels.length)] as
-      | "INFO"
-      | "WARN"
-      | "ERROR",
-    service: services[Math.floor(Math.random() * services.length)],
-    message: messages[Math.floor(Math.random() * messages.length)],
-  };
+  ERROR: [
+    "Database connection failed",
+    "Authentication request failed",
+    "Payment processing failed",
+    "API request returned server error",
+    "Database query failed",
+  ],
+};
+
+function randomItem<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
 }
 
-async function generateAndWriteLog() {
-  const log = generateLog();
+function randomLevel(): LogLevel {
+  const value = Math.random();
 
-  await writeLog(log);
+  if (value < 0.65) return "INFO";
+  if (value < 0.9) return "WARN";
 
-  console.log(JSON.stringify(log));
+  return "ERROR";
 }
 
-console.log("Log generator started...");
+async function generateLogs(count = 20): Promise<void> {
+  for (let i = 0; i < count; i++) {
+    const level = randomLevel();
 
-setInterval(() => {
-  generateAndWriteLog().catch((error) => {
-    console.error("Failed to write log:", error);
-  });
-}, 2000);
+    const log: Log = {
+      timestamp: new Date().toISOString(),
+      level,
+      service: randomItem(services),
+      message: randomItem(messages[level]),
+    };
+
+    await writeLog(log);
+  }
+
+  console.log(`Generated ${count} logs.`);
+}
+
+await generateLogs();
