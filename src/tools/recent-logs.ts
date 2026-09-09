@@ -3,7 +3,7 @@ import { readLogs } from "../log-service.js";
 import { config } from "../config.js";
 import { logError } from "../logger.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-
+import { sanitizeLogs } from "../security/sanitize-logs.js";
 export function registerRecentLogsTool(server: McpServer): void {
   server.tool(
     "get_recent_logs",
@@ -58,14 +58,16 @@ export function registerRecentLogsTool(server: McpServer): void {
         }
 
         const recentLogs = filteredLogs
-          .slice(-limit)
-          .reverse();
+  .slice(-limit)
+  .reverse();
+
+const sanitizedLogs = sanitizeLogs(recentLogs);
 
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify(recentLogs, null, 2),
+              text: JSON.stringify(sanitizedLogs, null, 2),
             },
           ],
         };

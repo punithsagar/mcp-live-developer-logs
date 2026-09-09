@@ -1,7 +1,10 @@
+
 import { z } from "zod";
 import { readLogs } from "../log-service.js";
 import { logError } from "../logger.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { sanitizeLogs } from "../security/sanitize-logs.js";
+
 export function registerSearchLogsTool(server: McpServer): void {
   server.tool(
     "search_logs",
@@ -31,6 +34,8 @@ export function registerSearchLogsTool(server: McpServer): void {
           return searchableText.includes(searchTerm);
         });
 
+        const sanitizedResults = sanitizeLogs(matchingLogs);
+
         return {
           content: [
             {
@@ -40,8 +45,8 @@ export function registerSearchLogsTool(server: McpServer): void {
                   query,
                   searchTerm,
                   totalLogs: logs.length,
-                  matches: matchingLogs.length,
-                  results: matchingLogs,
+                  matches: sanitizedResults.length,
+                  results: sanitizedResults,
                 },
                 null,
                 2
@@ -56,13 +61,16 @@ export function registerSearchLogsTool(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: JSON.stringify({
-                error: "Failed to search logs",
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : String(error),
-              }),
+              text: JSON.stringify(
+                {
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : String(error),
+                },
+                null,
+                2
+              ),
             },
           ],
           isError: true,
@@ -71,3 +79,4 @@ export function registerSearchLogsTool(server: McpServer): void {
     }
   );
 }
+

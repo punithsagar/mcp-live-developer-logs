@@ -4,6 +4,8 @@ import { config } from "../config.js";
 import { logInfo, logWarn, logError } from "../logger.js";
 import type { Log } from "../types.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { sanitizeLogMessage } from "../security/log-sanitizer.js";
+
 export function registerTailLiveLogsTool(server: McpServer): void {
   server.tool(
     "tail_live_logs",
@@ -38,19 +40,19 @@ export function registerTailLiveLogsTool(server: McpServer): void {
     },
 
     async (
-  {
-    duration,
-    level,
-    service,
-    max_logs,
-  }: {
-    duration: number;
-    level?: "INFO" | "WARN" | "ERROR";
-    service?: string;
-    max_logs: number;
-  },
-  extra: { signal: AbortSignal }
-) =>  {
+      {
+        duration,
+        level,
+        service,
+        max_logs,
+      }: {
+        duration: number;
+        level?: "INFO" | "WARN" | "ERROR";
+        service?: string;
+        max_logs: number;
+      },
+      extra: { signal: AbortSignal }
+    ) => {
       try {
         const logs: Log[] = [];
 
@@ -79,7 +81,10 @@ export function registerTailLiveLogsTool(server: McpServer): void {
               | "critical"
               | "alert"
               | "emergency",
-            data: JSON.stringify(log),
+            data: JSON.stringify({
+              ...log,
+              message: sanitizeLogMessage(log.message),
+            }),
           });
         });
 
@@ -109,7 +114,10 @@ export function registerTailLiveLogsTool(server: McpServer): void {
                 {
                   duration,
                   logsReceived: logs.length,
-                  logs,
+                  logs: logs.map((log) => ({
+                    ...log,
+                    message: sanitizeLogMessage(log.message),
+                  })),
                 },
                 null,
                 2
