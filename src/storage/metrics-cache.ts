@@ -19,6 +19,16 @@ export class MetricsCache {
     return this.cachedMetrics;
   }
 
+  isFresh(maxAgeMs: number): boolean {
+    if (!this.cachedMetrics) {
+      return false;
+    }
+
+    return (
+      Date.now() - this.cachedMetrics.updatedAt <= maxAgeMs
+    );
+  }
+
   clear(): void {
     this.cachedMetrics = null;
   }

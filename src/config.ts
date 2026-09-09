@@ -1,6 +1,8 @@
 export const config = {
   logFile: "logs/app.jsonl",
-
+metricsCache: {
+  maxAgeMs: 5000,
+},
   rotation: {
     maxFileSize: 1024 * 1024,
     maxBackups: 5,
