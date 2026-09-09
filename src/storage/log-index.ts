@@ -1,7 +1,7 @@
+import type { Log } from "../types.js";
+import { MetricsCache } from "./metrics-cache.js";
 import { readLogsIncrementally } from "./incremental-log-reader.js";
 import { LogAggregator } from "./log-aggregator.js";
-import { MetricsCache } from "./metrics-cache.js";
-import type { Log } from "../types.js";
 
 export class LogIndex {
   private position = 0;
@@ -9,9 +9,9 @@ export class LogIndex {
 
   private aggregator = new LogAggregator();
   private metricsCache = new MetricsCache();
-getLogsByService(service: string): Log[] {
-  return this.aggregator.getLogsByService(service);
-}
+
+  private lastUpdateAt = 0;
+  private lastFileSize = 0;
 
   async initialize(): Promise<void> {
     const result = await readLogsIncrementally(
@@ -23,7 +23,13 @@ getLogsByService(service: string): Log[] {
     this.remainder = result.remainder;
 
     this.aggregator.addLogs(result.logs);
-    this.metricsCache.set(this.aggregator.getAggregation());
+
+    this.metricsCache.set(
+      this.aggregator.getAggregation()
+    );
+
+    this.lastUpdateAt = Date.now();
+    this.lastFileSize = this.position;
   }
 
   async update(): Promise<void> {
@@ -32,20 +38,48 @@ getLogsByService(service: string): Log[] {
       this.remainder
     );
 
+    if (
+      result.nextPosition === this.position &&
+      result.logs.length === 0 &&
+      result.remainder === this.remainder
+    ) {
+      return;
+    }
+
     this.position = result.nextPosition;
     this.remainder = result.remainder;
 
     this.aggregator.addLogs(result.logs);
-    this.metricsCache.set(this.aggregator.getAggregation());
+
+    this.metricsCache.set(
+      this.aggregator.getAggregation()
+    );
+
+    this.lastUpdateAt = Date.now();
+    this.lastFileSize = this.position;
   }
 
   getAggregation() {
     return this.aggregator.getAggregation();
   }
+
   getCachedMetrics() {
-  return this.metricsCache.get();
-}
-getRecentLogs(): Log[] {
-  return this.aggregator.getLatestLogs();
-}
+    return this.metricsCache.get();
+  }
+
+  getRecentLogs(): Log[] {
+    return this.aggregator.getLatestLogs();
+  }
+
+  getLogsByService(service: string): Log[] {
+    return this.aggregator.getLogsByService(service);
+  }
+
+  getLastUpdateAt(): number {
+    return this.lastUpdateAt;
+  }
+
+  getLastFileSize(): number {
+    return this.lastFileSize;
+  }
 }
