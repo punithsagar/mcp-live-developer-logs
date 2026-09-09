@@ -16,52 +16,78 @@ export function registerAnalyzeLogsTool(server: any): void {
         .max(config.recentLogs.maxMinutes)
         .optional()
         .describe("Only analyze logs from the last N minutes"),
+
+      service: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Only analyze logs from the specified service"),
     },
 
-    async ({ minutes }: { minutes?: number }) => {
+    async ({
+      minutes,
+      service,
+    }: {
+      minutes?: number;
+      service?: string;
+    }) => {
       try {
-       const logIndex = await getLogIndex();
+        const logIndex = await getLogIndex();
 
-await updateLogIndex();
+        await updateLogIndex();
 
-const cachedMetrics = logIndex.getCachedMetrics();
+        if (minutes === undefined && service === undefined) {
+          const cachedMetrics = logIndex.getCachedMetrics();
 
-if (!cachedMetrics) {
-  throw new Error("Metrics cache is not initialized");
-}
+          if (!cachedMetrics) {
+            throw new Error("Metrics cache is not initialized");
+          }
 
-const aggregation = cachedMetrics.aggregation;
-
-        if (minutes === undefined) {
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(aggregation, null, 2),
+                text: JSON.stringify(
+                  cachedMetrics.aggregation,
+                  null,
+                  2
+                ),
               },
             ],
           };
         }
 
-      const recentLogs = logIndex.getRecentLogs();
+        let logs = logIndex.getRecentLogs();
 
-const cutoff =
-  Date.now() - minutes * 60 * 1000;
+        if (service !== undefined) {
+          logs = logIndex.getLogsByService(service);
+        }
 
-const filteredLogs = recentLogs.filter(
-  (log) =>
-    new Date(log.timestamp).getTime() >= cutoff
-);
+        if (minutes !== undefined) {
+          const cutoff =
+            Date.now() - minutes * 60 * 1000;
 
-const statistics =
-  calculateLogStatistics(filteredLogs);
+          logs = logs.filter(
+            (log) =>
+              new Date(log.timestamp).getTime() >= cutoff
+          );
+        }
+
+        const statistics =
+          calculateLogStatistics(logs);
+
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify(
                 {
-                  minutes,
+                  ...(minutes !== undefined
+                    ? { minutes }
+                    : {}),
+                  ...(service !== undefined
+                    ? { service }
+                    : {}),
                   ...statistics,
                 },
                 null,

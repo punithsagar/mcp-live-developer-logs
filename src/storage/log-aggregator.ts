@@ -19,6 +19,7 @@ export class LogAggregator {
   private byService: Record<string, number> = {};
   private errorsByService: Record<string, number> = {};
   private latestLogs: Log[] = [];
+  private logsByService: Record<string, Log[]> = {};
 
   addLogs(logs: Log[]): void {
     for (const log of logs) {
@@ -28,8 +29,16 @@ export class LogAggregator {
       if (log.level === "WARN") this.warnings++;
       if (log.level === "ERROR") this.errors++;
 
-      this.byService[log.service] =
-        (this.byService[log.service] ?? 0) + 1;
+      if (!this.logsByService[log.service]) {
+  this.logsByService[log.service] = [];
+}
+
+this.logsByService[log.service].push(log);
+
+if (this.logsByService[log.service].length > 100) {
+  this.logsByService[log.service] =
+    this.logsByService[log.service].slice(-100);
+}
 
       if (log.level === "ERROR") {
         this.errorsByService[log.service] =
@@ -58,5 +67,9 @@ export class LogAggregator {
   }
   getLatestLogs(): Log[] {
   return [...this.latestLogs];
+
+}
+getLogsByService(service: string): Log[] {
+  return [...(this.logsByService[service] ?? [])];
 }
 }

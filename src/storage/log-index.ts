@@ -9,7 +9,9 @@ export class LogIndex {
 
   private aggregator = new LogAggregator();
   private metricsCache = new MetricsCache();
-
+getLogsByService(service: string): Log[] {
+  return this.aggregator.getLogsByService(service);
+}
 
   async initialize(): Promise<void> {
     const result = await readLogsIncrementally(
