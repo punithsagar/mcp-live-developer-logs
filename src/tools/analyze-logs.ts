@@ -37,25 +37,51 @@ export function registerAnalyzeLogsTool(server: any): void {
         await updateLogIndex();
 
         if (minutes === undefined && service === undefined) {
-          const cachedMetrics = logIndex.getCachedMetrics();
+  const cachedMetrics = logIndex.getCachedMetrics();
 
-          if (!cachedMetrics) {
-            throw new Error("Metrics cache is not initialized");
-          }
+  if (!cachedMetrics) {
+    throw new Error("Metrics cache is not initialized");
+  }
 
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(
-                  cachedMetrics.aggregation,
-                  null,
-                  2
-                ),
-              },
-            ],
-          };
-        }
+  if (
+    Date.now() - cachedMetrics.updatedAt <=
+    config.metricsCache.maxAgeMs
+  ) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            cachedMetrics.aggregation,
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  await updateLogIndex();
+
+  const refreshedMetrics = logIndex.getCachedMetrics();
+
+  if (!refreshedMetrics) {
+    throw new Error("Metrics cache refresh failed");
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          refreshedMetrics.aggregation,
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
 
         let logs = logIndex.getRecentLogs();
 
