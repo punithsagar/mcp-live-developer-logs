@@ -56,4 +56,7 @@ export class LogAggregator {
       latestLogs: [...this.latestLogs],
     };
   }
+  getLatestLogs(): Log[] {
+  return [...this.latestLogs];
+}
 }

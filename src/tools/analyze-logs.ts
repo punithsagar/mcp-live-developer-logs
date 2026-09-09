@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getLogIndex, updateLogIndex, readLogs } from "../log-service.js";
+import { getLogIndex, updateLogIndex } from "../log-service.js";
 import { calculateLogStatistics } from "../log-statistics.js";
 import { config } from "../config.js";
 import { logError } from "../logger.js";
@@ -43,19 +43,18 @@ const aggregation = cachedMetrics.aggregation;
           };
         }
 
-        const logs = await readLogs();
+      const recentLogs = logIndex.getRecentLogs();
 
-        const cutoff =
-          Date.now() - minutes * 60 * 1000;
+const cutoff =
+  Date.now() - minutes * 60 * 1000;
 
-        const filteredLogs = logs.filter(
-          (log) =>
-            new Date(log.timestamp).getTime() >= cutoff
-        );
+const filteredLogs = recentLogs.filter(
+  (log) =>
+    new Date(log.timestamp).getTime() >= cutoff
+);
 
-        const statistics =
-          calculateLogStatistics(filteredLogs);
-
+const statistics =
+  calculateLogStatistics(filteredLogs);
         return {
           content: [
             {

@@ -1,6 +1,7 @@
 import { readLogsIncrementally } from "./incremental-log-reader.js";
 import { LogAggregator } from "./log-aggregator.js";
 import { MetricsCache } from "./metrics-cache.js";
+import type { Log } from "../types.js";
 
 export class LogIndex {
   private position = 0;
@@ -8,6 +9,7 @@ export class LogIndex {
 
   private aggregator = new LogAggregator();
   private metricsCache = new MetricsCache();
+
 
   async initialize(): Promise<void> {
     const result = await readLogsIncrementally(
@@ -40,5 +42,8 @@ export class LogIndex {
   }
   getCachedMetrics() {
   return this.metricsCache.get();
+}
+getRecentLogs(): Log[] {
+  return this.aggregator.getLatestLogs();
 }
 }
