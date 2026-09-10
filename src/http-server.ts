@@ -5,6 +5,7 @@ import { logError, logInfo } from "./logger.js";
 import { createMcpServer } from "./server.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+
 const transports = new Map<
   string,
   {
@@ -29,7 +30,11 @@ const httpServer = createServer(async (req, res) => {
       return;
     }
 
-    if (req.method !== "POST" && req.method !== "GET" && req.method !== "DELETE") {
+    if (
+      req.method !== "POST" &&
+      req.method !== "GET" &&
+      req.method !== "DELETE"
+    ) {
       res.writeHead(405, {
         "Content-Type": "application/json",
         Allow: "GET, POST, DELETE",
@@ -136,6 +141,41 @@ const httpServer = createServer(async (req, res) => {
       );
     }
   }
+});
+
+async function shutdown(signal: string): Promise<void> {
+  logInfo(`Received ${signal}. Shutting down gracefully...`);
+
+  for (const [sessionId, session] of transports) {
+    try {
+      await session.transport.close();
+      await session.server.close();
+
+      logInfo(`Closed MCP session: ${sessionId}`);
+    } catch (error) {
+      logError(`Failed to close MCP session ${sessionId}:`, error);
+    }
+  }
+
+  transports.clear();
+
+  httpServer.close((error) => {
+    if (error) {
+      logError("HTTP server shutdown failed:", error);
+      process.exitCode = 1;
+      return;
+    }
+
+    logInfo("HTTP server shut down cleanly");
+  });
+}
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
 });
 
 httpServer.listen(PORT, () => {
