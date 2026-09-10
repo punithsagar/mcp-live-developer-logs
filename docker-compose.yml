@@ -1,0 +1,11 @@
+services:
+  mcp-log-server:
+    build: .
+    container_name: mcp-log-server
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
