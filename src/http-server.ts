@@ -16,6 +16,22 @@ const transports = new Map<
 
 const httpServer = createServer(async (req, res) => {
   try {
+    // Health check endpoint
+    if (req.url === "/health" && req.method === "GET") {
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+      });
+
+      res.end(
+        JSON.stringify({
+          status: "healthy",
+          service: "mcp-log-server",
+        })
+      );
+
+      return;
+    }
+
     if (!req.url || !req.url.startsWith("/mcp")) {
       res.writeHead(404, {
         "Content-Type": "application/json",
@@ -179,5 +195,7 @@ process.on("SIGTERM", () => {
 });
 
 httpServer.listen(PORT, () => {
-  logInfo(`MCP Streamable HTTP server listening on http://localhost:${PORT}/mcp`);
+  logInfo(
+    `MCP Streamable HTTP server listening on http://localhost:${PORT}/mcp`
+  );
 });
