@@ -8,6 +8,7 @@ import { registerRecentLogsTool } from "./tools/recent-logs.js";
 import { registerSearchLogsTool } from "./tools/search-logs.js";
 import { registerAnalyzeLogsTool } from "./tools/analyze-logs.js";
 import { registerTailLiveLogsTool } from "./tools/tail-live-logs.js";
+import { registerMetricsResources } from "./resources/metrics.js";
 
 const server = new McpServer(
   {
@@ -26,6 +27,7 @@ registerSearchLogsTool(server);
 registerAnalyzeLogsTool(server);
 registerTailLiveLogsTool(server);
 registerSystemHealthTool(server);
+registerMetricsResources(server);
 
 const transport = new StdioServerTransport();
 
