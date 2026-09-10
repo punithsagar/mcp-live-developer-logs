@@ -4,7 +4,9 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { logError, logInfo } from "./logger.js";
 import { createMcpServer } from "./server.js";
 
-const PORT = Number(process.env.PORT ?? 3000);
+import { config } from "./config.js";
+
+const PORT = config.port;
 
 const transports = new Map<
   string,

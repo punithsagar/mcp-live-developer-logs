@@ -6,6 +6,10 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
+      LOG_FILE: /app/logs/app.jsonl
+      LOG_MAX_FILE_SIZE: 1048576
+      LOG_MAX_BACKUPS: 5
+      METRICS_CACHE_MAX_AGE_MS: 5000
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
