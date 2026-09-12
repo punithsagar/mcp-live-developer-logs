@@ -1,8 +1,9 @@
-import { watch } from "node:fs";
 import { stat, readFile } from "node:fs/promises";
 import type { Log } from "./types.js";
 import { logInfo, logWarn, logError } from "./logger.js";
+
 const logFile = "logs/app.jsonl";
+const POLL_INTERVAL_MS = 250;
 
 export async function watchLogs(
   onLog: (log: Log) => void | Promise<void>
@@ -10,6 +11,7 @@ export async function watchLogs(
   let filePosition = 0;
   let processing = false;
   let pending = false;
+  let stopped = false;
 
   try {
     const fileStats = await stat(logFile);
@@ -23,61 +25,77 @@ export async function watchLogs(
 
   logInfo("Starting from position:", filePosition);
 
-  const watcher = watch(logFile, async () => {
+  const processNewLogs = async (): Promise<void> => {
+    if (stopped) {
+      return;
+    }
+
     if (processing) {
       pending = true;
       return;
     }
 
-     processing = true;
+    processing = true;
 
-try {
-  do {
-    pending = false;
+    try {
+      do {
+        pending = false;
 
-    const newStats = await stat(logFile);
+        if (stopped) {
+          return;
+        }
 
-    if (newStats.size < filePosition) {
-       logWarn(
-       "Log file was truncated or replaced. Resetting position."
-               );
-      filePosition = 0;
+        const newStats = await stat(logFile);
+
+        if (newStats.size < filePosition) {
+          logWarn(
+            "Log file was truncated or replaced. Resetting position."
+          );
+
+          filePosition = 0;
+        }
+
+        if (newStats.size === filePosition) {
+          continue;
+        }
+
+        const fileContent = await readFile(logFile, "utf-8");
+
+        const newContent = fileContent.slice(filePosition);
+
+        filePosition = newStats.size;
+
+        const newLines = newContent
+          .split("\n")
+          .filter((line) => line.trim().length > 0);
+
+        for (const line of newLines) {
+          try {
+            const log = JSON.parse(line) as Log;
+
+            await onLog(log);
+          } catch (error) {
+            logError("Failed to parse log line:", line);
+            logError("Parse error:", error);
+          }
+        }
+      } while (pending);
+    } finally {
+      processing = false;
     }
+  };
 
-    if (newStats.size === filePosition) {
-      continue;
-    }
+  const interval = setInterval(() => {
+    void processNewLogs();
+  }, POLL_INTERVAL_MS);
 
-    const fileContent = await readFile(logFile, "utf-8");
-
-    const newContent = fileContent.slice(filePosition);
-
-    filePosition = newStats.size;
-
-    const newLines = newContent
-      .split("\n")
-      .filter((line) => line.trim().length > 0);
-
-    for (const line of newLines) {
-      try {
-        const log = JSON.parse(line) as Log;
-
-        await onLog(log);
-      } catch (error) {
-        logError("Failed to parse log line:", line);
-        logError("Parse error:", error);
-      }
-    }
-  } while (pending);
-} finally {
-  processing = false;
-}
-  });
-
-  logInfo("Watching:", logFile);
+  logInfo(
+    `Watching: ${logFile} using polling every ${POLL_INTERVAL_MS}ms`
+  );
 
   return () => {
-    watcher.close();
+    stopped = true;
+    clearInterval(interval);
     logInfo("Stopped watching:", logFile);
   };
 }
