@@ -47,21 +47,28 @@ function randomLevel(): LogLevel {
   return "ERROR";
 }
 
-async function generateLogs(count = 20): Promise<void> {
-  for (let i = 0; i < count; i++) {
-    const level = randomLevel();
+async function generateLog(): Promise<void> {
+  const level = randomLevel();
 
-    const log: Log = {
-      timestamp: new Date().toISOString(),
-      level,
-      service: randomItem(services),
-      message: randomItem(messages[level]),
-    };
+  const log: Log = {
+    timestamp: new Date().toISOString(),
+    level,
+    service: randomItem(services),
+    message: randomItem(messages[level]),
+  };
 
+  try {
     await writeLog(log);
+    console.log(JSON.stringify(log));
+  } catch (error) {
+    console.error("Failed to write log:", error);
   }
-
-  console.log(`Generated ${count} logs.`);
 }
 
-await generateLogs();
+console.log("Log generator started...");
+
+setInterval(() => {
+  void generateLog();
+}, 2000);
+
+void generateLog();
