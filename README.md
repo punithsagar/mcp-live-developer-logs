@@ -32,49 +32,49 @@ The server can:
 ---
 
 ## Architecture
+```mermaid
+flowchart TD
+    A["AI Client<br/>MCP Inspector / MCP-compatible client"]
 
-```text
-                    ┌─────────────────────────┐
-                    │       AI Client         │
-                    │                         │
-                    │  MCP Inspector /        │
-                    │  MCP-compatible client  │
-                    └────────────┬────────────┘
-                                 │
-                                 │ MCP
-                                 ▼
-                    ┌─────────────────────────┐
-                    │      MCP Server         │
-                    │                         │
-                    │  Tools                  │
-                    │  Resources              │
-                    │  Logging notifications  │
-                    └────────────┬────────────┘
-                                 │
-              ┌──────────────────┼──────────────────┐
-              │                  │                  │
-              ▼                  ▼                  ▼
-       ┌─────────────┐   ┌──────────────┐   ┌──────────────┐
-       │ Log Service │   │ Log Index    │   │ Sanitization │
-       │             │   │              │   │              │
-       │ Read/Search │   │ Aggregation  │   │ Secret       │
-       │ Logs        │   │ Statistics   │   │ Redaction    │
-       └──────┬──────┘   │ Cache        │   └──────────────┘
-              │          └──────┬───────┘
-              │                 │
-              └────────┬────────┘
-                       ▼
-                ┌──────────────┐
-                │ JSONL Log    │
-                │ Storage      │
-                │              │
-                │ app.jsonl    │
-                └──────────────┘
+    B["MCP Server<br/>Node.js + TypeScript"]
 
-              Docker / Streamable HTTP
+    C["MCP Tools<br/>Recent Logs<br/>Search<br/>Live Tail<br/>Analysis<br/>System Health"]
+
+    D["MCP Resources<br/>Error Rate<br/>Health<br/>Service Summary"]
+
+    E["Log Service"]
+
+    F["Security Layer<br/>Secret & JWT Sanitization"]
+
+    G["Log Index<br/>Incremental Reader<br/>Aggregation<br/>Metrics Cache"]
+
+    H["JSONL Log Storage<br/>app.jsonl"]
+
+    I["Live Log Watcher<br/>Polling-based"]
+
+    J["Streamable HTTP<br/>:3000/mcp"]
+
+    K["Docker<br/>Docker Compose"]
+
+    L["Health Endpoint<br/>/health"]
+
+    A --> B
+    A --> J
+    J --> B
+    B --> C
+    B --> D
+    C --> E
+    C --> I
+    D --> G
+    E --> F
+    F --> G
+    I --> G
+    G --> H
+    K --> B
+    K --> L
+    L --> K
 ```
 
----
 
 ## Key Features
 
@@ -383,7 +383,6 @@ The CI pipeline installs dependencies and verifies that the project builds succe
 
 ## Project Structure
 
-```text
 mcp/
 │
 ├── src/
@@ -433,7 +432,6 @@ mcp/
 │       └── ci.yml
 ├── package.json
 └── tsconfig.json
-```
 
 ---
 
