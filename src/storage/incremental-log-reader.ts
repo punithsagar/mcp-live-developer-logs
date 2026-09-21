@@ -1,7 +1,8 @@
 import { open } from "node:fs/promises";
 import type { Log } from "../types.js";
 
-const logFile = "logs/app.jsonl";
+import { config } from "../config.js";
+const logFile = config.logFile;
 
 export interface IncrementalReadResult {
   logs: Log[];

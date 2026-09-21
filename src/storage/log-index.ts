@@ -3,7 +3,7 @@ import { stat } from "node:fs/promises";
 import { MetricsCache } from "./metrics-cache.js";
 import { readLogsIncrementally } from "./incremental-log-reader.js";
 import { LogAggregator } from "./log-aggregator.js";
-
+import { config } from "../config.js";
 export class LogIndex {
   private position = 0;
   private remainder = "";
@@ -34,7 +34,7 @@ export class LogIndex {
   }
 
   async update(): Promise<void> {
-    const fileStats = await stat("logs/app.jsonl");
+    const fileStats = await stat(config.logFile);
 
     if (fileStats.size < this.position) {
       this.position = 0;

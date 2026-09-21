@@ -1,12 +1,11 @@
+
 import { z } from "zod";
 import { watchLogs } from "../live-log-watcher.js";
 import { config } from "../config.js";
 import { logInfo, logWarn, logError } from "../logger.js";
-import type { Log } from "../types.js";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sanitizeLogMessage } from "../security/log-sanitizer.js";
 
-export function registerTailLiveLogsTool(server: McpServer): void {
+export function registerTailLiveLogsTool(server: any) {
   server.tool(
     "tail_live_logs",
     "Continuously watches the application log file and reports new logs as they arrive",
@@ -39,24 +38,15 @@ export function registerTailLiveLogsTool(server: McpServer): void {
         .describe("Maximum number of matching logs to collect"),
     },
 
-    async (
-      {
-        duration,
-        level,
-        service,
-        max_logs,
-      }: {
-        duration: number;
-        level?: "INFO" | "WARN" | "ERROR";
-        service?: string;
-        max_logs: number;
-      },
-      extra: { signal: AbortSignal }
-    ) => {
+    async ({ duration, level, service, max_logs }: any, extra: any) => {
       try {
-        const logs: Log[] = [];
+    
+
+        const logs: any[] = [];
 
         const stopWatching = await watchLogs(async (log) => {
+          
+
           if (level && log.level !== level) {
             return;
           }
@@ -72,15 +62,7 @@ export function registerTailLiveLogsTool(server: McpServer): void {
           logInfo("Live log:", log);
 
           await server.server.sendLoggingMessage({
-            level: log.level.toLowerCase() as
-              | "debug"
-              | "info"
-              | "notice"
-              | "warning"
-              | "error"
-              | "critical"
-              | "alert"
-              | "emergency",
+            level: log.level.toLowerCase(),
             data: JSON.stringify({
               ...log,
               message: sanitizeLogMessage(log.message),
@@ -104,6 +86,8 @@ export function registerTailLiveLogsTool(server: McpServer): void {
           );
         });
 
+        
+
         stopWatching();
 
         return {
@@ -126,14 +110,14 @@ export function registerTailLiveLogsTool(server: McpServer): void {
           ],
         };
       } catch (error) {
-        logError("Failed to tail live logs:", error);
+        logError("tail_live_logs failed:", error);
 
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify({
-                error: "Failed to stream live logs",
+                error: "tail_live_logs_failed",
                 message:
                   error instanceof Error
                     ? error.message

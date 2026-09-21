@@ -1,3 +1,6 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const getNumberEnv = (
   name: string,
   defaultValue: number,
@@ -21,10 +24,17 @@ const getNumberEnv = (
   return parsed;
 };
 
+const projectRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
+
 export const config = {
   port: getNumberEnv("PORT", 3000, 1, 65535),
 
-  logFile: process.env.LOG_FILE ?? "logs/app.jsonl",
+  logFile:
+    process.env.LOG_FILE ??
+    path.join(projectRoot, "logs", "app.jsonl"),
 
   rotation: {
     maxFileSize: getNumberEnv(
@@ -49,7 +59,7 @@ export const config = {
   liveLogs: {
     defaultDuration: 30,
     maxDuration: 300,
-    defaultMaxLogs: 100,
+    defaultMaxLogs: 1000,
     maxLogs: 1000,
   },
 };

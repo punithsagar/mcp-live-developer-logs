@@ -1,0 +1,20 @@
+{
+  "manifest_version": "0.1",
+  "name": "mcp-log-server",
+  "display_name": "MCP Developer Logs & Observability",
+  "version": "1.0.2",
+  "description": "MCP server for application log retrieval, search, live streaming, analytics, and service health monitoring.",
+  "author": {
+    "name": "Punith Sagar"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ]
+    }
+  }
+}
